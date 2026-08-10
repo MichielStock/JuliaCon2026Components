@@ -20,15 +20,5 @@ your CSS/JS. Relative asset paths won't work — reference images either as
 `data:` URIs or by commit-pinned GitHub raw URL, e.g.
 `https://raw.githubusercontent.com/<user>/<repo>/<commit-sha>/viz_submission/foo.png`.
 
-## For organisers
-
-`.github/workflows/publish-to-gallery.yml` publishes submissions. It needs two
-repo secrets (Settings → Secrets and variables → Actions):
-
-- `GALLERY_API_URL` — the gallery server, no trailing slash
-  (e.g. `https://scoreboard-production-df34.up.railway.app`)
-- `GALLERY_CI_KEY` — the key configured as `CI_KEY` on the gallery server
-
-The workflow uses `pull_request_target` so fork PRs can publish too; it never
-executes participant code — it only reads files from `viz_submission/` and
-uploads them.
+## Visualisations:
+Read `VisualisationSpec.md` to understand general guidelines and theme for visualisations, so that your visualisation alligns with the gallery theme and other visualisation submissions.
