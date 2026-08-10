@@ -1,0 +1,246 @@
+"""
+Water potential connector.
+
+Acausal hydraulic connector for plant-water relations, following PlantModules.jl.
+The potential variable is the total water potential Psi [MPa]; the flow variable
+is the water flux F [g/h], taken positive when flowing *into* the component.
+"""
+connector HydraulicPort
+  "Total water potential [MPa]"
+  potential Psi::Real
+  "Water flux into the component [g h^-1]"
+  flow F::Real
+end
+
+"""
+Hydraulics-driven growing compartment (the core `hydraulic_module`).
+
+Models a cylindrical plant compartment whose volume grows with water accumulation
+following the elastic-viscoplastic Lockhart model with a smooth (LogSumExp) yield
+threshold. The total water potential combines turgor, osmotic (van 't Hoff) and
+gravitational components.
+
+Growth per axis i:  (1/l_i) d l_i/dt = phi (P - Gamma)_+ + (1/E) dP/dt
+with the smooth threshold (x)_+ = LSE_alpha(x, 0) = (1/alpha) log(exp(alpha x) + 1).
+"""
+component HydraulicCompartment
+  "Water port"
+  port = HydraulicPort()
+
+  "Cell-wall extensibility [MPa^-1 h^-1]"
+  parameter phi::Real = 0.02
+  "Cell-wall elastic modulus [MPa]"
+  parameter E::Real = 50.0
+  "Yield turgor pressure [MPa]"
+  parameter Gamma::Real = 0.3
+  "Osmotically active metabolite content [mol cm^-3]"
+  parameter M::Real = 300e-6
+  "Temperature [K]"
+  parameter T::Real = 298.15
+  "Yield-threshold steepness"
+  parameter alpha::Real = 40.0
+  "Height above ground [cm]"
+  parameter height::Real = 0.0
+  "Water density [g cm^-3]"
+  parameter rho_w::Real = 1.0
+  "Ideal gas constant [J mol^-1 K^-1]"
+  parameter R_gas::Real = 8.314
+  "Gravitational-potential coefficient [MPa cm^-1] (= rho_w g)"
+  parameter c_grav::Real = 9.81e-5
+  "Initial radius [cm]"
+  parameter Rd0::Real = 0.5
+  "Initial length [cm]"
+  parameter L0::Real = 5.0
+  "Initial turgor pressure [MPa]"
+  parameter P0::Real = 0.5
+
+  "Turgor (hydrostatic) pressure [MPa]"
+  variable P::Real
+  "Water content [g]"
+  variable W::Real
+  "Radius, growth axis 1 [cm]"
+  variable Rd::Real
+  "Length, growth axis 2 [cm]"
+  variable L::Real
+  "Volume [cm^3]"
+  variable V::Real
+  "Total water potential [MPa]"
+  variable Psi::Real
+  "Osmotic potential [MPa]"
+  variable Psi_osm::Real
+  "Smooth yield term [MPa]"
+  variable yield::Real
+relations
+  initial Rd = Rd0
+  initial L = L0
+  initial P = P0
+
+  # Cylinder geometry and water content
+  V = π * Rd^2 * L
+  W = rho_w * V
+
+  # Total water potential: turgor + osmotic (van 't Hoff) + gravitational
+  Psi_osm = -R_gas * T * M
+  Psi = P + Psi_osm + c_grav * height
+
+  # Smooth yield threshold (LogSumExp)
+  yield = (1.0 / alpha) * log(exp(alpha * (P - Gamma)) + 1.0)
+
+  # Water balance: net influx equals flow into the port
+  der(W) = port.F
+
+  # Lockhart elastic-viscoplastic growth, one equation per axis
+  der(Rd) / Rd = phi * yield + der(P) / E
+  der(L) / L = phi * yield + der(P) / E
+
+  # Expose the compartment's water potential at the port
+  port.Psi = Psi
+end
+
+"""
+Prescribed water-flux boundary.
+
+Draws a periodic water flux through its port. With default sign it removes water
+from the connected compartment during the first half-period and returns it during
+the second, giving a net-zero forcing suitable for exercising a compartment in
+isolation. Also used as a simple transpiration driver.
+"""
+component FluxSource
+  "Water port"
+  port = HydraulicPort()
+  "Flux amplitude [g h^-1]"
+  parameter amplitude::Real = 5.0
+  "Forcing period [h]"
+  parameter period::Real = 24.0
+relations
+  port.F = amplitude * sin(2 * π * time / period)
+end
+
+"""
+Non-growing environmental compartment (the `environmental_module`).
+
+Represents a fixed-size water pool (soil or air) subject to hydraulic laws but
+without growth. The total water potential follows the empirical soil relation
+Psi(W_r) = -(a / W_r) exp(-b W_r), with W_r the relative water content.
+A large water capacity makes it act as a near-constant-potential reservoir.
+"""
+component EnvironmentalCompartment
+  "Water port"
+  port = HydraulicPort()
+  "Water capacity [g]"
+  parameter W_max::Real = 1e6
+  "Initial relative water content [g g^-1]"
+  parameter W_r0::Real = 0.8
+  "Soil-curve scale parameter [MPa]"
+  parameter a::Real = 0.03
+  "Soil-curve shape parameter"
+  parameter b::Real = 0.5
+
+  "Water content [g]"
+  variable W::Real
+  "Relative water content [g g^-1]"
+  variable W_r::Real
+  "Total water potential [MPa]"
+  variable Psi::Real
+relations
+  initial W = W_r0 * W_max
+  W_r = W / W_max
+  Psi = -(a / W_r) * exp(-b * W_r)
+  der(W) = port.F
+  port.Psi = Psi
+end
+
+"""
+Hydraulic connection (edge module).
+
+Darcy water flow between two compartments driven by the water-potential
+difference: F = K (Psi_a - Psi_b), directed from port_a to port_b.
+"""
+component HydraulicConnection
+  "Port on the upstream (higher-potential) compartment"
+  port_a = HydraulicPort()
+  "Port on the downstream compartment"
+  port_b = HydraulicPort()
+  "Hydraulic conductivity [g h^-1 MPa^-1]"
+  parameter K::Real = 10.0
+  "Water flow from a to b [g h^-1]"
+  variable F::Real
+relations
+  F = K * (port_a.Psi - port_b.Psi)
+  port_a.F = F
+  port_b.F = -F
+end
+
+"""
+Transpiration boundary (leaf-air edge module).
+
+Draws a non-negative, diurnal water flux out of the connected compartment,
+representing transpirational water loss:
+F = Emax (1 - cos(2 pi t / period)) / 2, zero at midnight and peaking at midday.
+"""
+component Transpiration
+  "Water port (connects to a leaf compartment)"
+  port = HydraulicPort()
+  "Peak transpiration rate [g h^-1]"
+  parameter Emax::Real = 1.0
+  "Diurnal period [h]"
+  parameter period::Real = 24.0
+relations
+  port.F = Emax * (1.0 - cos(2 * π * time / period)) / 2.0
+end
+
+# --- Increment 1 test: single compartment driven by an oscillating flux ---
+
+component TestCompartment
+  comp = HydraulicCompartment()
+  src = FluxSource(amplitude = 0.2, period = 24.0)
+relations
+  connect(comp.port, src.port)
+end
+
+analysis TestCompartmentTransient
+  extends TransientAnalysis(stop = 48.0)
+  model = TestCompartment()
+end
+
+# --- Increment 2 test: compartment fed from a soil reservoir via Darcy flow ---
+
+component TestSoilCompartment
+  soil = EnvironmentalCompartment()
+  conn = HydraulicConnection(K = 10.0)
+  comp = HydraulicCompartment()
+relations
+  connect(soil.port, conn.port_a)
+  connect(conn.port_b, comp.port)
+end
+
+analysis TestSoilCompartmentTransient
+  extends TransientAnalysis(stop = 48.0)
+  model = TestSoilCompartment()
+end
+
+# --- Increment 3 test: soil -> stem -> leaf chain driven by transpiration ---
+# Reproduces the tomato-example behaviour: transpiration lowers stem water potential.
+
+component TestPlant
+  "Transpiration peak rate [g h^-1] (raise for stronger evaporative demand)"
+  parameter Emax::Real = 1.0
+
+  soil = EnvironmentalCompartment()
+  conn_ss = HydraulicConnection(K = 10.0)
+  stem = HydraulicCompartment(Rd0 = 0.5, L0 = 10.0)
+  conn_sl = HydraulicConnection(K = 10.0)
+  leaf = HydraulicCompartment(Rd0 = 0.4, L0 = 4.0)
+  transp = Transpiration(Emax = Emax, period = 24.0)
+relations
+  connect(soil.port, conn_ss.port_a)
+  connect(conn_ss.port_b, stem.port)
+  connect(stem.port, conn_sl.port_a)
+  connect(conn_sl.port_b, leaf.port)
+  connect(leaf.port, transp.port)
+end
+
+analysis TestPlantTransient
+  extends TransientAnalysis(stop = 48.0)
+  model = TestPlant()
+end

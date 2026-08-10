@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PlantModules · Hydraulic Telemetry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* accent — slot 2 · azure (slug "plantmodules") */
+  --deep:#11327A;
+  --base:#1F55C9;
+  --lift:#4677DE;
+  --wash:#EBEFFB;
+  --acc-hair:#CAD6F3;
+
+  /* surface + ink */
+  --stage:#F3F2F7;
+  --paper:#FAFBFF;
+  --panel2:#FDFCFF;
+  --ink:#1A1330;
+  --ink2:#4A4365;
+  --ink3:#8580A0;
+  --hair:#D8D3E8;
+  --hair-soft:rgba(216,211,232,0.6);
+  --chip:#EFECF8;
+  --dq:#C4574B;
+
+  --sans:'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+
+  --shadow:0 10px 34px rgba(20,15,40,0.13);
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--stage);
+  color:var(--ink2);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.num{font-family:var(--mono);font-feature-settings:"tnum" 1;}
+
+.wrap{
+  max-width:1240px;
+  margin:0 auto;
+  padding:40px 32px 32px;
+}
+
+/* ---------- header ---------- */
+.kicker{
+  font-family:var(--mono);
+  font-weight:500;
+  font-size:11px;
+  letter-spacing:0.24em;
+  text-transform:uppercase;
+  color:var(--base);
+  margin:0 0 12px;
+}
+.kicker .dot{color:var(--acc-hair);margin:0 6px;}
+.headline{
+  font-family:var(--sans);
+  font-weight:500;
+  font-size:31px;
+  letter-spacing:-0.02em;
+  line-height:1.15;
+  color:var(--base);
+  margin:0;
+}
+.headline span{color:var(--ink);}
+.lede{
+  max-width:640px;
+  margin:14px 0 0;
+  color:var(--ink2);
+  font-size:14px;
+}
+.head-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:24px;
+  flex-wrap:wrap;
+}
+.head-meta{
+  text-align:right;
+  min-width:180px;
+}
+.head-meta .label{
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color:var(--ink3);
+  display:block;
+  margin-bottom:4px;
+}
+.head-meta .val{
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--ink);
+  letter-spacing:0.02em;
+}
+
+/* ---------- grid ---------- */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:16px;
+  margin-top:32px;
+}
+.card{
+  background:var(--paper);
+  border:1px solid rgba(31,85,201,0.14);
+  border-radius:11px;
+  box-shadow:var(--shadow);
+  padding:20px 22px;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+.card .kicker{margin-bottom:14px;font-size:10.5px;}
+
+.span4{grid-column:span 4;}
+.span5{grid-column:span 5;}
+.span6{grid-column:span 6;}
+.span7{grid-column:span 7;}
+.span8{grid-column:span 8;}
+.span3{grid-column:span 3;}
+
+/* ---------- hero ---------- */
+.hero-num{
+  font-family:var(--mono);
+  font-weight:500;
+  font-size:52px;
+  letter-spacing:-0.02em;
+  color:var(--base);
+  line-height:1;
+}
+.hero-num .unit{
+  font-size:20px;
+  color:var(--ink3);
+  margin-left:6px;
+  letter-spacing:0;
+}
+.hero-sub{
+  margin-top:10px;
+  font-size:13.5px;
+  color:var(--ink2);
+}
+.hero-sub b{color:var(--ink);font-weight:500;}
+.hero-spark{margin-top:auto;padding-top:16px;}
+
+/* ---------- readouts / list ---------- */
+.stat-list{display:flex;flex-direction:column;gap:0;margin-top:2px;}
+.stat-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  padding:11px 0;
+  border-bottom:1px solid var(--hair-soft);
+}
+.stat-row:last-child{border-bottom:none;}
+.stat-row .k{
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color:var(--ink3);
+}
+.stat-row .v{
+  font-family:var(--mono);
+  font-size:18px;
+  color:var(--ink);
+  letter-spacing:-0.01em;
+}
+.stat-row .v .u{font-size:11px;color:var(--ink3);margin-left:3px;}
+
+/* ---------- legend ---------- */
+.legend{
+  display:flex;
+  gap:18px;
+  flex-wrap:wrap;
+  margin-bottom:2px;
+}
+.legend .item{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--ink3);
+}
+.legend .swatch{width:12px;height:3px;border-radius:1.5px;}
+
+/* ---------- chart ---------- */
+.chart-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:12px;
+  flex-wrap:wrap;
+}
+.chart-wrap{position:relative;width:100%;}
+svg.chart{display:block;width:100%;height:auto;}
+.playline{stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 4;}
+.plot-band{fill:var(--wash);}
+.axis-txt{font-family:var(--mono);fill:var(--ink3);letter-spacing:0.02em;}
+.grid-line{stroke:var(--hair);stroke-width:1;}
+.grid-zero{stroke:var(--acc-hair);stroke-width:1;}
+
+.readout-strip{
+  display:flex;
+  gap:26px;
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid var(--hair-soft);
+  flex-wrap:wrap;
+}
+.readout{display:flex;flex-direction:column;gap:3px;}
+.readout .rk{
+  font-family:var(--mono);
+  font-size:9.5px;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color:var(--ink3);
+}
+.readout .rv{
+  font-family:var(--mono);
+  font-size:18px;
+  color:var(--base);
+  letter-spacing:-0.01em;
+}
+.readout .rv.ink{color:var(--ink);}
+.readout .rv .u{font-size:11px;color:var(--ink3);margin-left:3px;}
+
+.hint{
+  font-family:var(--mono);
+  font-size:9.5px;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color:var(--ink3);
+}
+
+/* ---------- meter ---------- */
+.meter-val{
+  font-family:var(--mono);
+  font-weight:500;
+  font-size:44px;
+  letter-spacing:-0.02em;
+  color:var(--base);
+  line-height:1;
+}
+.meter-val .unit{font-size:17px;color:var(--ink3);margin-left:5px;letter-spacing:0;}
+.meter-sub{margin-top:8px;font-size:13px;color:var(--ink2);}
+.meter{
+  display:flex;
+  gap:3px;
+  margin-top:auto;
+  padding-top:20px;
+  height:6px;
+  align-items:stretch;
+}
+.seg{flex:1;height:6px;border-radius:1.5px;background:rgba(26,19,48,0.16);transition:background .38s ease;}
+.seg.lit{background:var(--base);}
+.seg.lit.top{background:var(--ink);}
+.meter-scale{
+  display:flex;
+  justify-content:space-between;
+  margin-top:8px;
+  font-family:var(--mono);
+  font-size:9.5px;
+  letter-spacing:0.12em;
+  color:var(--ink3);
+}
+
+/* ---------- schematic panel ---------- */
+.panel-schematic{
+  margin-top:32px;
+  border-radius:14px;
+}
+.controls{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.ctl-btn{
+  font-family:var(--mono);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:var(--base);
+  background:var(--chip);
+  border:1.2px solid rgba(31,85,201,0.14);
+  border-radius:7px;
+  padding:8px 14px;
+  cursor:pointer;
+  transition:border-color .38s ease, background .38s ease, color .38s ease;
+}
+.ctl-btn:hover{border-color:rgba(31,85,201,0.45);}
+.ctl-btn.playing{background:var(--base);color:var(--paper);border-color:var(--base);}
+.ctl-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.scrub{
+  -webkit-appearance:none;appearance:none;
+  width:220px;height:6px;
+  background:var(--hair);
+  border-radius:3px;
+  outline:none;cursor:pointer;
+}
+.scrub::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--base);
+  border:2px solid var(--paper);
+  box-shadow:0 1px 4px rgba(20,15,40,0.25);
+  cursor:pointer;
+}
+.scrub::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;
+  background:var(--base);
+  border:2px solid var(--paper);
+  cursor:pointer;
+}
+.ctl-time{
+  font-family:var(--mono);
+  font-size:18px;
+  color:var(--ink);
+  letter-spacing:-0.01em;
+  min-width:66px;
+  text-align:right;
+}
+.ctl-time .u{font-size:11px;color:var(--ink3);margin-left:3px;}
+
+.flowpipe{stroke:var(--lift);stroke-linecap:round;}
+.flux-lbl{font-family:var(--mono);fill:var(--ink3);font-size:12px;letter-spacing:0.04em;}
+.node-wash{fill:var(--wash);stroke:var(--acc-hair);stroke-width:1.4;}
+.node-fill{fill:var(--base);}
+.node-title{font-family:var(--mono);fill:var(--base);font-size:13px;font-weight:500;letter-spacing:0.16em;}
+.node-val{font-family:var(--mono);fill:var(--ink3);font-size:12px;letter-spacing:0.02em;}
+.node-val.ink{fill:var(--ink);font-size:13px;}
+.node-sub{font-family:var(--mono);fill:var(--ink3);font-size:11px;letter-spacing:0.02em;}
+.sun-core{fill:var(--lift);stroke:var(--base);stroke-width:1.4;}
+.sun-ray{stroke:var(--lift);stroke-width:2.4;stroke-linecap:round;}
+
+/* ---------- footer ---------- */
+.footer{
+  margin-top:28px;
+  padding-top:16px;
+  border-top:1px solid var(--hair);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-family:var(--mono);
+  font-size:10.5px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:var(--ink3);
+}
+.footer .sep{color:var(--base);opacity:0.55;margin:0 10px;}
+
+/* ---------- reveal motion ---------- */
+.reveal{opacity:0;transform:translateY(12px);}
+.revealed{
+  opacity:1;transform:translateY(0);
+  transition:opacity .6s ease, transform .6s ease;
+}
+
+@media (max-width:1080px){
+  .span4,.span5,.span6,.span7,.span8,.span3{grid-column:span 12;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important;}
+  .reveal{opacity:1;transform:none;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- header -->
+  <header class="head-row reveal">
+    <div>
+      <p class="kicker">01 <span class="dot">·</span> HYDRAULIC TELEMETRY</p>
+      <h1 class="headline">Water climbs the plant<br><span>soil → stem → leaf, over two days</span></h1>
+      <p class="lede">An acausal PlantModules chain: a soil reservoir feeds a growing stem and leaf
+        through Darcy links while diurnal transpiration pulls water out of the canopy. Turgor,
+        water potential and Lockhart growth all respond to one driver — the sun.</p>
+    </div>
+    <div class="head-meta">
+      <span class="label">Model</span>
+      <span class="val num">TestPlant · 48 h</span>
+    </div>
+  </header>
+
+  <!-- system schematic + time control -->
+  <section class="card panel-schematic reveal">
+    <div class="chart-head">
+      <div>
+        <p class="kicker">02 <span class="dot">·</span> SYSTEM SCHEMATIC</p>
+        <div class="legend">
+          <span class="item"><span class="swatch" style="background:var(--base)"></span>Turgor fill</span>
+          <span class="item"><span class="swatch" style="background:var(--lift)"></span>Water flux</span>
+          <span class="item">Node size ∝ volume</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="playBtn" class="ctl-btn" type="button" aria-label="Play timeline">▶&nbsp;PLAY</button>
+        <input id="scrub" class="scrub" type="range" min="0" max="48" step="0.1" value="12" aria-label="Time" />
+        <span class="ctl-time num" id="ctl-time">12.0<span class="u">h</span></span>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <svg id="plantSchematic" class="chart" viewBox="0 0 1000 300">
+        <defs>
+          <marker id="flowHead" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="12"
+                  refX="11" refY="6" orient="auto">
+            <path d="M0,0 L12,6 L0,12 Z" fill="#1F55C9"></path>
+          </marker>
+        </defs>
+
+        <!-- ground -->
+        <line id="ground" x1="30" y1="250" x2="970" y2="250" class="grid-line"></line>
+        <text x="30" y="272" class="axis-txt" font-size="12" letter-spacing="0.15em">ROOT ZONE</text>
+
+        <!-- flux conduits -->
+        <line id="arr-ss" class="flowpipe" x1="185" y1="222" x2="286" y2="222" marker-end="url(#flowHead)"></line>
+        <line id="arr-sl" class="flowpipe" x1="382" y1="222" x2="500" y2="222" marker-end="url(#flowHead)"></line>
+        <line id="arr-tr" class="flowpipe" x1="560" y1="150" x2="770" y2="128" marker-end="url(#flowHead)"></line>
+        <text id="f-ss" class="flux-lbl" x="235" y="210" text-anchor="middle">0.72</text>
+        <text id="f-sl" class="flux-lbl" x="441" y="210" text-anchor="middle">0.60</text>
+        <text id="f-tr" class="flux-lbl" x="660" y="120" text-anchor="middle">1.00</text>
+
+        <!-- soil reservoir -->
+        <rect id="soil-body" x="55" y="150" width="110" height="100" rx="7" class="node-wash"></rect>
+        <rect id="soil-fill" x="60" y="160" width="100" height="86" rx="4" class="node-fill" opacity="0.5"></rect>
+        <text x="110" y="140" text-anchor="middle" class="node-title">SOIL</text>
+        <text id="soil-psi" x="110" y="272" text-anchor="middle" class="node-val">Ψ −0.025</text>
+
+        <!-- stem compartment -->
+        <rect id="stem-body" x="293" y="120" width="74" height="130" rx="6" class="node-wash"></rect>
+        <rect id="stem-fill" x="296" y="180" width="68" height="70" rx="3" class="node-fill"></rect>
+        <text id="stem-title" x="330" y="110" text-anchor="middle" class="node-title">STEM</text>
+        <text id="stem-v"  x="380" y="152" text-anchor="start" class="node-val ink">10.13 cm³</text>
+        <text id="stem-psi" x="380" y="168" text-anchor="start" class="node-sub">Ψ −0.146</text>
+
+        <!-- leaf compartment -->
+        <rect id="leaf-body" x="523" y="180" width="34" height="70" rx="6" class="node-wash"></rect>
+        <rect id="leaf-fill" x="526" y="215" width="28" height="35" rx="3" class="node-fill"></rect>
+        <text id="leaf-title" x="540" y="170" text-anchor="middle" class="node-title">LEAF</text>
+        <text id="leaf-v"  x="600" y="205" text-anchor="start" class="node-val ink">2.48 cm³</text>
+        <text id="leaf-psi" x="600" y="221" text-anchor="start" class="node-sub">Ψ −0.249</text>
+
+        <!-- sun (transpiration sink) -->
+        <g id="sun-rays"></g>
+        <circle id="sun-core" cx="850" cy="108" r="30" class="sun-core"></circle>
+        <text x="850" y="170" text-anchor="middle" class="node-title">AIR</text>
+        <text x="850" y="187" text-anchor="middle" class="node-sub">EFFLUX → SKY</text>
+      </svg>
+    </div>
+    <div class="readout-strip">
+      <div class="readout"><span class="rk">Soil → stem flux</span><span class="rv num" id="ro-fss">0.72<span class="u">g/h</span></span></div>
+      <div class="readout"><span class="rk">Stem → leaf flux</span><span class="rv num" id="ro-fsl">0.60<span class="u">g/h</span></span></div>
+      <div class="readout"><span class="rk">Stem turgor</span><span class="rv num" id="ro-stemp">0.60<span class="u">MPa</span></span></div>
+      <div class="readout"><span class="rk">Leaf turgor</span><span class="rv num" id="ro-leafp">0.49<span class="u">MPa</span></span></div>
+    </div>
+  </section>
+
+  <div class="grid">
+
+    <!-- hero: stem growth -->
+    <section class="card span4 reveal">
+      <p class="kicker">03 <span class="dot">·</span> STEM GROWTH</p>
+      <div class="hero-num num">+165.8<span class="unit">%</span></div>
+      <p class="hero-sub">Stem volume <b>7.85 → 20.88 cm³</b> in 48 h.
+        Water uptake outruns the daily transpiration deficit, so the compartment
+        ratchets outward every cycle.</p>
+      <div class="hero-spark">
+        <svg class="chart" viewBox="0 0 460 120" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" style="stop-color:var(--lift);stop-opacity:0.28"/>
+              <stop offset="1" style="stop-color:var(--lift);stop-opacity:0"/>
+            </linearGradient>
+          </defs>
+          <path id="spark-area" fill="url(#sparkFill)" stroke="none"></path>
+          <path id="spark-line" fill="none" style="stroke:var(--base)" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+        </svg>
+      </div>
+    </section>
+
+    <!-- water potential telemetry -->
+    <section class="card span8 reveal">
+      <div class="chart-head">
+        <div>
+          <p class="kicker">04 <span class="dot">·</span> WATER POTENTIAL TRACE</p>
+          <div class="legend">
+            <span class="item"><span class="swatch" style="background:var(--deep)"></span>Soil Ψ</span>
+            <span class="item"><span class="swatch" style="background:var(--base)"></span>Stem Ψ</span>
+            <span class="item"><span class="swatch" style="background:var(--lift)"></span>Leaf Ψ</span>
+          </div>
+        </div>
+        <span class="hint">Hover / scrub →</span>
+      </div>
+      <div class="chart-wrap">
+        <svg id="psiChart" class="chart" viewBox="0 0 1000 300"></svg>
+      </div>
+      <div class="readout-strip">
+        <div class="readout">
+          <span class="rk">Cursor time</span>
+          <span class="rv ink num" id="ro-time">12.0<span class="u">h</span></span>
+        </div>
+        <div class="readout">
+          <span class="rk">Soil Ψ</span>
+          <span class="rv num" id="ro-soil">-0.025<span class="u">MPa</span></span>
+        </div>
+        <div class="readout">
+          <span class="rk">Stem Ψ</span>
+          <span class="rv num" id="ro-stem">-0.146<span class="u">MPa</span></span>
+        </div>
+        <div class="readout">
+          <span class="rk">Leaf Ψ</span>
+          <span class="rv num" id="ro-leaf">-0.249<span class="u">MPa</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- turgor meter -->
+    <section class="card span4 reveal">
+      <p class="kicker">05 <span class="dot">·</span> LEAF TURGOR</p>
+      <div class="meter-val num" id="turgor-val">0.49<span class="unit">MPa</span></div>
+      <p class="meter-sub">Pressure that inflates the cell. It sags at midday as the leaf
+        loses water faster than the stem resupplies it.</p>
+      <div class="meter" id="turgor-meter"></div>
+      <div class="meter-scale"><span>0.45</span><span>WINDOW · MPa</span><span>0.70</span></div>
+    </section>
+
+    <!-- growth trajectory -->
+    <section class="card span8 reveal">
+      <div class="chart-head">
+        <div>
+          <p class="kicker">06 <span class="dot">·</span> GROWTH TRAJECTORY</p>
+          <div class="legend">
+            <span class="item"><span class="swatch" style="background:var(--base)"></span>Stem V</span>
+            <span class="item"><span class="swatch" style="background:var(--lift)"></span>Leaf V</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="growthChart" class="chart" viewBox="0 0 1000 300"></svg>
+      </div>
+      <div class="readout-strip">
+        <div class="readout">
+          <span class="rk">Stem volume</span>
+          <span class="rv num" id="ro-stemv">9.07<span class="u">cm³</span></span>
+        </div>
+        <div class="readout">
+          <span class="rk">Leaf volume</span>
+          <span class="rv num" id="ro-leafv">2.30<span class="u">cm³</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- transpiration driver -->
+    <section class="card span8 reveal">
+      <div class="chart-head">
+        <div>
+          <p class="kicker">07 <span class="dot">·</span> TRANSPIRATION DRIVER</p>
+          <div class="legend">
+            <span class="item"><span class="swatch" style="background:var(--base)"></span>Leaf efflux</span>
+          </div>
+        </div>
+        <span class="hint">The sun · one damped cursor drives all four tiles</span>
+      </div>
+      <div class="chart-wrap">
+        <svg id="transpChart" class="chart" viewBox="0 0 1000 300"></svg>
+      </div>
+      <div class="readout-strip">
+        <div class="readout">
+          <span class="rk">Flux now</span>
+          <span class="rv num" id="ro-transp">1.00<span class="u">g/h</span></span>
+        </div>
+        <div class="readout">
+          <span class="rk">Total 48 h</span>
+          <span class="rv ink num">24.0<span class="u">g</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- run summary -->
+    <section class="card span4 reveal">
+      <p class="kicker">08 <span class="dot">·</span> RUN SUMMARY</p>
+      <div class="stat-list">
+        <div class="stat-row"><span class="k">Leaf growth</span><span class="v num">+126.6<span class="u">%</span></span></div>
+        <div class="stat-row"><span class="k">Peak transpiration</span><span class="v num">1.00<span class="u">g/h</span></span></div>
+        <div class="stat-row"><span class="k">Leaf Ψ minimum</span><span class="v num">-0.261<span class="u">MPa</span></span></div>
+        <div class="stat-row"><span class="k">Soil Ψ (reservoir)</span><span class="v num">-0.025<span class="u">MPa</span></span></div>
+        <div class="stat-row"><span class="k">Diurnal period</span><span class="v num">24.0<span class="u">h</span></span></div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="footer">
+    <span>COMPETITION <span class="sep">|</span> PlantModules</span>
+    <span>JULIACON 2026</span>
+  </footer>
+
+</div>
+
+<script>
+/* ===== embedded simulation data (TestPlant, 0..48 h @ 0.5 h) ===== */
+const PD = {
+  t: [0.0,0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0,10.5,11.0,11.5,12.0,12.5,13.0,13.5,14.0,14.5,15.0,15.5,16.0,16.5,17.0,17.5,18.0,18.5,19.0,19.5,20.0,20.5,21.0,21.5,22.0,22.5,23.0,23.5,24.0,24.5,25.0,25.5,26.0,26.5,27.0,27.5,28.0,28.5,29.0,29.5,30.0,30.5,31.0,31.5,32.0,32.5,33.0,33.5,34.0,34.5,35.0,35.5,36.0,36.5,37.0,37.5,38.0,38.5,39.0,39.5,40.0,40.5,41.0,41.5,42.0,42.5,43.0,43.5,44.0,44.5,45.0,45.5,46.0,46.5,47.0,47.5,48.0],
+  soil_Psi: [-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251,-0.0251],
+  stem_Psi: [-0.2436,-0.0493,-0.0506,-0.0527,-0.0555,-0.0591,-0.0632,-0.068,-0.0732,-0.0788,-0.0847,-0.0908,-0.097,-0.1032,-0.1094,-0.1153,-0.1209,-0.1262,-0.131,-0.1352,-0.1388,-0.1417,-0.1439,-0.1454,-0.1461,-0.146,-0.1451,-0.1435,-0.1412,-0.1381,-0.1345,-0.1303,-0.1257,-0.1206,-0.1153,-0.1097,-0.1041,-0.0984,-0.0929,-0.0875,-0.0825,-0.0778,-0.0736,-0.07,-0.0669,-0.0646,-0.0629,-0.062,-0.0618,-0.0624,-0.0638,-0.0659,-0.0687,-0.0721,-0.0762,-0.0808,-0.0859,-0.0913,-0.097,-0.103,-0.109,-0.1151,-0.121,-0.1268,-0.1323,-0.1374,-0.1421,-0.1463,-0.1498,-0.1528,-0.155,-0.1566,-0.1574,-0.1574,-0.1567,-0.1553,-0.1533,-0.1505,-0.1472,-0.1434,-0.1391,-0.1344,-0.1295,-0.1243,-0.1191,-0.1139,-0.1087,-0.1037,-0.0991,-0.0948,-0.0909,-0.0875,-0.0847,-0.0826,-0.0811,-0.0803,-0.0802],
+  leaf_Psi: [-0.2436,-0.0545,-0.057,-0.0612,-0.0669,-0.074,-0.0823,-0.0919,-0.1024,-0.1137,-0.1257,-0.1381,-0.1507,-0.1633,-0.1757,-0.1877,-0.1991,-0.2097,-0.2193,-0.2277,-0.2349,-0.2407,-0.245,-0.2478,-0.249,-0.2485,-0.2465,-0.2429,-0.2378,-0.2313,-0.2235,-0.2146,-0.2047,-0.194,-0.1827,-0.171,-0.1591,-0.1471,-0.1354,-0.1241,-0.1134,-0.1035,-0.0946,-0.0868,-0.0803,-0.0751,-0.0714,-0.0693,-0.0687,-0.0698,-0.0724,-0.0765,-0.0821,-0.0891,-0.0973,-0.1067,-0.117,-0.1281,-0.1398,-0.152,-0.1643,-0.1767,-0.1888,-0.2006,-0.2118,-0.2222,-0.2317,-0.24,-0.2472,-0.2529,-0.2573,-0.2601,-0.2614,-0.2611,-0.2593,-0.256,-0.2512,-0.2451,-0.2377,-0.2292,-0.2198,-0.2096,-0.1988,-0.1875,-0.1761,-0.1647,-0.1535,-0.1426,-0.1324,-0.1229,-0.1144,-0.1069,-0.1007,-0.0958,-0.0924,-0.0904,-0.0899],
+  stem_P: [0.5,0.6944,0.6931,0.691,0.6881,0.6846,0.6804,0.6757,0.6705,0.6649,0.659,0.6529,0.6466,0.6404,0.6343,0.6284,0.6227,0.6175,0.6127,0.6085,0.6049,0.6019,0.5997,0.5983,0.5976,0.5977,0.5985,0.6001,0.6025,0.6055,0.6091,0.6133,0.618,0.623,0.6284,0.6339,0.6396,0.6452,0.6508,0.6561,0.6612,0.6658,0.67,0.6737,0.6767,0.6791,0.6807,0.6817,0.6818,0.6812,0.6799,0.6778,0.675,0.6715,0.6675,0.6629,0.6578,0.6523,0.6466,0.6407,0.6346,0.6286,0.6226,0.6168,0.6113,0.6062,0.6015,0.5974,0.5938,0.5909,0.5886,0.5871,0.5863,0.5862,0.5869,0.5883,0.5904,0.5931,0.5964,0.6003,0.6046,0.6092,0.6142,0.6193,0.6246,0.6298,0.6349,0.6399,0.6446,0.6489,0.6528,0.6561,0.6589,0.6611,0.6625,0.6633,0.6634],
+  leaf_P: [0.5,0.6892,0.6866,0.6824,0.6768,0.6697,0.6613,0.6518,0.6412,0.6299,0.6179,0.6056,0.593,0.5803,0.5679,0.5559,0.5446,0.534,0.5244,0.5159,0.5087,0.5029,0.4986,0.4958,0.4947,0.4951,0.4972,0.5008,0.5059,0.5124,0.5201,0.529,0.5389,0.5496,0.5609,0.5726,0.5846,0.5965,0.6082,0.6195,0.6302,0.6401,0.6491,0.6569,0.6634,0.6685,0.6722,0.6744,0.6749,0.6739,0.6713,0.6672,0.6616,0.6546,0.6463,0.637,0.6267,0.6156,0.6038,0.5917,0.5793,0.567,0.5548,0.543,0.5319,0.5214,0.512,0.5036,0.4965,0.4907,0.4864,0.4835,0.4822,0.4825,0.4843,0.4877,0.4925,0.4986,0.506,0.5144,0.5239,0.5341,0.5449,0.5561,0.5675,0.579,0.5902,0.601,0.6113,0.6207,0.6293,0.6367,0.6429,0.6478,0.6513,0.6533,0.6538],
+  stem_V: [7.854,8.036,8.13,8.226,8.321,8.416,8.511,8.606,8.7,8.793,8.886,8.978,9.07,9.16,9.25,9.339,9.428,9.515,9.603,9.691,9.778,9.866,9.954,10.042,10.132,10.223,10.315,10.409,10.505,10.604,10.704,10.807,10.913,11.022,11.134,11.249,11.367,11.488,11.612,11.74,11.87,12.004,12.14,12.279,12.42,12.564,12.709,12.856,13.004,13.154,13.304,13.454,13.604,13.755,13.905,14.054,14.203,14.35,14.496,14.641,14.785,14.927,15.068,15.208,15.347,15.485,15.623,15.76,15.897,16.034,16.172,16.31,16.45,16.592,16.736,16.883,17.032,17.184,17.34,17.5,17.664,17.833,18.006,18.183,18.365,18.552,18.744,18.94,19.141,19.346,19.556,19.769,19.985,20.205,20.427,20.652,20.878],
+  leaf_V: [2.011,2.056,2.08,2.103,2.127,2.15,2.172,2.194,2.216,2.237,2.257,2.277,2.295,2.313,2.331,2.347,2.364,2.379,2.394,2.409,2.423,2.437,2.451,2.465,2.48,2.494,2.509,2.525,2.541,2.558,2.576,2.595,2.615,2.635,2.658,2.681,2.705,2.731,2.758,2.786,2.815,2.845,2.876,2.908,2.941,2.974,3.008,3.042,3.077,3.111,3.146,3.18,3.214,3.247,3.28,3.312,3.343,3.373,3.402,3.43,3.457,3.483,3.508,3.532,3.555,3.577,3.598,3.619,3.639,3.659,3.679,3.698,3.718,3.739,3.76,3.782,3.804,3.828,3.853,3.879,3.907,3.937,3.968,4.0,4.034,4.07,4.108,4.147,4.188,4.231,4.274,4.319,4.365,4.412,4.459,4.507,4.555],
+  transp_F: [0.0,0.0043,0.017,0.0381,0.067,0.1033,0.1464,0.1956,0.25,0.3087,0.3706,0.4347,0.5,0.5653,0.6294,0.6913,0.75,0.8044,0.8536,0.8967,0.933,0.9619,0.983,0.9957,1.0,0.9957,0.983,0.9619,0.933,0.8967,0.8536,0.8044,0.75,0.6913,0.6294,0.5653,0.5,0.4347,0.3706,0.3087,0.25,0.1956,0.1464,0.1033,0.067,0.0381,0.017,0.0043,0.0,0.0043,0.017,0.0381,0.067,0.1033,0.1464,0.1956,0.25,0.3087,0.3706,0.4347,0.5,0.5653,0.6294,0.6913,0.75,0.8044,0.8536,0.8967,0.933,0.9619,0.983,0.9957,1.0,0.9957,0.983,0.9619,0.933,0.8967,0.8536,0.8044,0.75,0.6913,0.6294,0.5653,0.5,0.4347,0.3706,0.3087,0.25,0.1956,0.1464,0.1033,0.067,0.0381,0.017,0.0043,0.0]
+};
+
+/* ===== helpers ===== */
+const T0 = PD.t[0], T1 = PD.t[PD.t.length-1], DT = PD.t[1]-PD.t[0];
+const css = getComputedStyle(document.documentElement);
+const C = {
+  deep: css.getPropertyValue('--deep').trim(),
+  base: css.getPropertyValue('--base').trim(),
+  lift: css.getPropertyValue('--lift').trim(),
+  ink3: css.getPropertyValue('--ink3').trim(),
+};
+const SVGNS='http://www.w3.org/2000/svg';
+
+function lerpAt(arr, t){
+  const x = (t - T0)/DT;
+  const i = Math.max(0, Math.min(arr.length-1, Math.floor(x)));
+  const j = Math.min(arr.length-1, i+1);
+  const f = x - i;
+  return arr[i]*(1-f) + arr[j]*f;
+}
+function el(name, attrs){
+  const e = document.createElementNS(SVGNS, name);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+/* generic linear chart plotter into a viewBox 1000x300 */
+function makeChart(svg, opts){
+  const W=1000, H=300;
+  const m = opts.margin || {l:64,r:14,t:16,b:34};
+  const iw = W-m.l-m.r, ih = H-m.t-m.b;
+  const [x0,x1] = [T0,T1];
+  const [y0,y1] = opts.ydom;
+  const X = t => m.l + (t-x0)/(x1-x0)*iw;
+  const Y = v => m.t + (y1-v)/(y1-y0)*ih;
+
+  // y grid + labels
+  (opts.yticks||[]).forEach(v=>{
+    const yy = Y(v);
+    const zero = (opts.zeroLine!==undefined && Math.abs(v-opts.zeroLine)<1e-9);
+    svg.appendChild(el('line',{x1:m.l,x2:W-m.r,y1:yy,y2:yy,class: zero?'grid-zero':'grid-line'}));
+    const tx = el('text',{x:m.l-10,y:yy+5,'text-anchor':'end',class:'axis-txt','font-size':15});
+    tx.textContent = opts.yfmt ? opts.yfmt(v) : v;
+    svg.appendChild(tx);
+  });
+  // x ticks
+  (opts.xticks||[0,12,24,36,48]).forEach(t=>{
+    const xx = X(t);
+    svg.appendChild(el('line',{x1:xx,x2:xx,y1:m.t,y2:H-m.b,class:'grid-line'}));
+    const tx = el('text',{x:xx,y:H-m.b+22,'text-anchor':'middle',class:'axis-txt','font-size':15});
+    tx.textContent = t;
+    svg.appendChild(tx);
+  });
+  // x axis unit
+  const xl = el('text',{x:W-m.r,y:H-2,'text-anchor':'end',class:'axis-txt','font-size':13,'letter-spacing':'0.15em'});
+  xl.textContent = 'TIME · H';
+  svg.appendChild(xl);
+
+  // series
+  (opts.series||[]).forEach(s=>{
+    if(s.fill){
+      let d = `M ${X(x0)} ${Y(y0)} `;
+      s.data.forEach((v,k)=> d += `L ${X(PD.t[k])} ${Y(v)} `);
+      d += `L ${X(x1)} ${Y(y0)} Z`;
+      svg.appendChild(el('path',{d, fill:s.fill, stroke:'none'}));
+    }
+    let d='';
+    s.data.forEach((v,k)=> d += (k?'L':'M')+` ${X(PD.t[k])} ${Y(v)} `);
+    svg.appendChild(el('path',{d, fill:'none', stroke:s.color, 'stroke-width':s.w||2.4, 'stroke-linejoin':'round','stroke-linecap':'round', 'vector-effect':'non-scaling-stroke'}));
+  });
+
+  // playhead + markers
+  const play = el('line',{x1:X(12),x2:X(12),y1:m.t,y2:H-m.b,class:'playline'});
+  svg.appendChild(play);
+  const marks = (opts.markSeries||[]).map(s=>{
+    const c = el('circle',{r:4.5, fill:'#FAFBFF', stroke:s.color, 'stroke-width':2.2, cx:X(12), cy:Y(lerpAt(s.data,12))});
+    svg.appendChild(c);
+    return {c, data:s.data};
+  });
+
+  return {
+    X, Y,
+    setTime(t){
+      const xx = X(t);
+      play.setAttribute('x1',xx); play.setAttribute('x2',xx);
+      marks.forEach(mk=> { mk.c.setAttribute('cx',xx); mk.c.setAttribute('cy', Y(lerpAt(mk.data,t))); });
+    },
+    m, iw, x0, x1
+  };
+}
+
+/* ===== build charts ===== */
+const psi = makeChart(document.getElementById('psiChart'), {
+  ydom:[-0.28, 0.0],
+  yticks:[0,-0.05,-0.1,-0.15,-0.2,-0.25],
+  zeroLine:0,
+  yfmt:v=> v.toFixed(2),
+  series:[
+    {data:PD.soil_Psi, color:C.deep, w:2},
+    {data:PD.stem_Psi, color:C.base, w:2.6},
+    {data:PD.leaf_Psi, color:C.lift, w:2.6},
+  ],
+  markSeries:[
+    {data:PD.soil_Psi, color:C.deep},
+    {data:PD.stem_Psi, color:C.base},
+    {data:PD.leaf_Psi, color:C.lift},
+  ]
+});
+
+const growth = makeChart(document.getElementById('growthChart'), {
+  margin:{l:52,r:14,t:16,b:34},
+  ydom:[0, 22],
+  yticks:[0,5,10,15,20],
+  yfmt:v=> v.toFixed(0),
+  series:[
+    {data:PD.leaf_V, color:C.lift, w:2.6},
+    {data:PD.stem_V, color:C.base, w:2.6},
+  ],
+  markSeries:[
+    {data:PD.stem_V, color:C.base},
+    {data:PD.leaf_V, color:C.lift},
+  ]
+});
+
+const transp = makeChart(document.getElementById('transpChart'), {
+  margin:{l:44,r:14,t:16,b:34},
+  ydom:[0, 1.05],
+  yticks:[0,0.5,1.0],
+  yfmt:v=> v.toFixed(1),
+  series:[
+    {data:PD.transp_F, color:C.base, w:2.6, fill:'rgba(31,85,201,0.14)'},
+  ],
+  markSeries:[
+    {data:PD.transp_F, color:C.base},
+  ]
+});
+
+/* hero sparkline (own tiny plotter, 460x120, no axes) */
+(function(){
+  const A = document.getElementById('spark-area');
+  const L = document.getElementById('spark-line');
+  const W=460,H=120,pad=8;
+  const vmin=Math.min(...PD.stem_V), vmax=Math.max(...PD.stem_V);
+  const X=k=> pad + k/(PD.stem_V.length-1)*(W-2*pad);
+  const Y=v=> H-pad - (v-vmin)/(vmax-vmin)*(H-2*pad);
+  let d='', a=`M ${X(0)} ${H-pad} `;
+  PD.stem_V.forEach((v,k)=>{ d+=(k?'L':'M')+` ${X(k)} ${Y(v)} `; a+=`L ${X(k)} ${Y(v)} `; });
+  a+=`L ${X(PD.stem_V.length-1)} ${H-pad} Z`;
+  A.setAttribute('d',a); L.setAttribute('d',d);
+})();
+
+/* ===== turgor meter ===== */
+const meterEl = document.getElementById('turgor-meter');
+const SEG=10;
+for(let i=0;i<SEG;i++){ const s=document.createElement('div'); s.className='seg'; meterEl.appendChild(s); }
+const segs=[...meterEl.children];
+const P_LO=0.45, P_HI=0.70;
+
+/* ===== live plant schematic ===== */
+const SC={ ground:250, soilC:110, stemC:330, leafC:540, sun:{x:850,y:108,r:30}, S:33 };
+const gel = id => document.getElementById(id);
+const sch = {
+  stemBody:gel('stem-body'), stemFill:gel('stem-fill'), stemV:gel('stem-v'), stemPsi:gel('stem-psi'), stemTitle:gel('stem-title'),
+  leafBody:gel('leaf-body'), leafFill:gel('leaf-fill'), leafV:gel('leaf-v'), leafPsi:gel('leaf-psi'), leafTitle:gel('leaf-title'),
+  soilPsi:gel('soil-psi'),
+  arrSS:gel('arr-ss'), arrSL:gel('arr-sl'), arrTR:gel('arr-tr'),
+  fSS:gel('f-ss'), fSL:gel('f-sl'), fTR:gel('f-tr'),
+};
+const sunRays=[];
+(function(){
+  const g=gel('sun-rays');
+  for(let i=0;i<8;i++){
+    const a=i/8*2*Math.PI;
+    const ln=el('line',{class:'sun-ray',x1:SC.sun.x,y1:SC.sun.y,x2:SC.sun.x,y2:SC.sun.y});
+    g.appendChild(ln); sunRays.push({ln,a});
+  }
+})();
+const fmtN = x => (x<0?'−':'')+Math.abs(x).toFixed(3);
+
+function schNode(bodyEl, fillEl, center, V, P){
+  const h = Math.sqrt(V)*SC.S, w = h*0.5;
+  const y = SC.ground - h;
+  bodyEl.setAttribute('x', (center-w/2).toFixed(1));
+  bodyEl.setAttribute('y', y.toFixed(1));
+  bodyEl.setAttribute('width', w.toFixed(1));
+  bodyEl.setAttribute('height', h.toFixed(1));
+  const fr = Math.max(0.05, Math.min(1,(P-P_LO)/(P_HI-P_LO)));
+  const fw = w-6, fh = (h-6)*fr;
+  fillEl.setAttribute('x', (center-fw/2).toFixed(1));
+  fillEl.setAttribute('y', (SC.ground-3-fh).toFixed(1));
+  fillEl.setAttribute('width', fw.toFixed(1));
+  fillEl.setAttribute('height', fh.toFixed(1));
+  return {h, y};
+}
+function schFlux(lineEl, lblEl, F){
+  const m = Math.min(Math.abs(F),1.4)/1.4;
+  lineEl.style.strokeWidth = (2+7*m).toFixed(2);
+  lineEl.style.opacity = (0.35+0.6*m).toFixed(2);
+  lblEl.textContent = F.toFixed(2);
+}
+function drawPlant(t){
+  const soilPsi=lerpAt(PD.soil_Psi,t), stemPsi=lerpAt(PD.stem_Psi,t), leafPsi=lerpAt(PD.leaf_Psi,t);
+  const stemP=lerpAt(PD.stem_P,t), leafP=lerpAt(PD.leaf_P,t);
+  const stemV=lerpAt(PD.stem_V,t), leafV=lerpAt(PD.leaf_V,t);
+  const trF=lerpAt(PD.transp_F,t);
+  const connSS=10*(soilPsi-stemPsi), connSL=10*(stemPsi-leafPsi);
+
+  const sN=schNode(sch.stemBody, sch.stemFill, SC.stemC, stemV, stemP);
+  const lN=schNode(sch.leafBody, sch.leafFill, SC.leafC, leafV, leafP);
+
+  sch.stemTitle.setAttribute('y', (sN.y-10).toFixed(0));
+  sch.stemV.textContent = stemV.toFixed(2)+' cm³';
+  sch.stemPsi.textContent = 'Ψ '+fmtN(stemPsi);
+
+  sch.leafTitle.setAttribute('y', (lN.y-10).toFixed(0));
+  sch.leafV.textContent = leafV.toFixed(2)+' cm³';
+  sch.leafPsi.textContent = 'Ψ '+fmtN(leafPsi);
+
+  sch.soilPsi.textContent = 'Ψ '+fmtN(soilPsi);
+
+  schFlux(sch.arrSS, sch.fSS, connSS);
+  schFlux(sch.arrSL, sch.fSL, connSL);
+  schFlux(sch.arrTR, sch.fTR, trF);
+  sch.arrTR.setAttribute('x1', (SC.leafC+8).toFixed(0));
+  sch.arrTR.setAttribute('y1', (lN.y+6).toFixed(0));
+
+  const rlen=8+22*trF, rop=0.25+0.75*trF;
+  sunRays.forEach(r=>{
+    const c=Math.cos(r.a), s=Math.sin(r.a);
+    r.ln.setAttribute('x1', (SC.sun.x+c*(SC.sun.r+3)).toFixed(1));
+    r.ln.setAttribute('y1', (SC.sun.y+s*(SC.sun.r+3)).toFixed(1));
+    r.ln.setAttribute('x2', (SC.sun.x+c*(SC.sun.r+3+rlen)).toFixed(1));
+    r.ln.setAttribute('y2', (SC.sun.y+s*(SC.sun.r+3+rlen)).toFixed(1));
+    r.ln.setAttribute('opacity', rop.toFixed(2));
+  });
+
+  ro.fss.innerHTML   = unit(connSS.toFixed(2),'g/h');
+  ro.fsl.innerHTML   = unit(connSL.toFixed(2),'g/h');
+  ro.stemp.innerHTML = unit(stemP.toFixed(2),'MPa');
+  ro.leafp.innerHTML = unit(leafP.toFixed(2),'MPa');
+}
+
+/* ===== readouts ===== */
+const ro={
+  time:document.getElementById('ro-time'),
+  soil:document.getElementById('ro-soil'),
+  stem:document.getElementById('ro-stem'),
+  leaf:document.getElementById('ro-leaf'),
+  stemv:document.getElementById('ro-stemv'),
+  leafv:document.getElementById('ro-leafv'),
+  transp:document.getElementById('ro-transp'),
+  turgor:document.getElementById('turgor-val'),
+  fss:document.getElementById('ro-fss'),
+  fsl:document.getElementById('ro-fsl'),
+  stemp:document.getElementById('ro-stemp'),
+  leafp:document.getElementById('ro-leafp'),
+};
+const scrub  = document.getElementById('scrub');
+const playBtn= document.getElementById('playBtn');
+const ctlTime= document.getElementById('ctl-time');
+let scrubbing=false;
+function unit(txt,u){ return `${txt}<span class="u">${u}</span>`; }
+
+function render(t){
+  psi.setTime(t); growth.setTime(t); transp.setTime(t);
+  ro.time.innerHTML   = unit(t.toFixed(1),'h');
+  ro.soil.innerHTML   = unit(lerpAt(PD.soil_Psi,t).toFixed(3),'MPa');
+  ro.stem.innerHTML   = unit(lerpAt(PD.stem_Psi,t).toFixed(3),'MPa');
+  ro.leaf.innerHTML   = unit(lerpAt(PD.leaf_Psi,t).toFixed(3),'MPa');
+  ro.stemv.innerHTML  = unit(lerpAt(PD.stem_V,t).toFixed(2),'cm³');
+  ro.leafv.innerHTML  = unit(lerpAt(PD.leaf_V,t).toFixed(2),'cm³');
+  ro.transp.innerHTML = unit(lerpAt(PD.transp_F,t).toFixed(2),'g/h');
+
+  const P = lerpAt(PD.leaf_P,t);
+  ro.turgor.innerHTML = unit(P.toFixed(2),'MPa');
+  const frac = Math.max(0, Math.min(1,(P-P_LO)/(P_HI-P_LO)));
+  const lit = Math.round(frac*SEG);
+  segs.forEach((s,i)=>{
+    const on = i<lit;
+    s.classList.toggle('lit', on);
+    s.classList.toggle('top', on && i>=SEG-3);
+  });
+
+  drawPlant(t);
+  ctlTime.innerHTML = unit(t.toFixed(1),'h');
+  if(!scrubbing) scrub.value = t;
+}
+
+/* ===== single damped signal drives everything ===== */
+const state={ t:12, target:12, raf:null };
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function tick(){
+  state.t += (state.target - state.t)*0.16;
+  render(state.t);
+  if(Math.abs(state.target-state.t) > 0.01){
+    state.raf = requestAnimationFrame(tick);
+  } else {
+    state.t = state.target; render(state.t); state.raf=null;
+  }
+}
+function drive(target){
+  state.target = Math.max(T0, Math.min(T1, target));
+  if(reduced){ state.t=state.target; render(state.t); return; }
+  if(!state.raf) state.raf = requestAnimationFrame(tick);
+}
+
+/* pointer scrubbing over any chart maps x → time */
+function attachScrub(svg, ch){
+  function toTime(evt){
+    const r = svg.getBoundingClientRect();
+    const px = (evt.clientX - r.left)/r.width*1000;   // viewBox x
+    const frac = (px - ch.m.l)/ch.iw;
+    return ch.x0 + Math.max(0,Math.min(1,frac))*(ch.x1-ch.x0);
+  }
+  svg.style.cursor='crosshair';
+  svg.addEventListener('pointermove', e=> drive(toTime(e)));
+}
+attachScrub(document.getElementById('psiChart'), psi);
+attachScrub(document.getElementById('growthChart'), growth);
+attachScrub(document.getElementById('transpChart'), transp);
+
+/* ===== time control: slider + play (user-initiated, non-looping) ===== */
+const DURATION = 16; // seconds for a full 0→48 h sweep
+let playing=false, playRAF=null, playPrev=0, playPos=12;
+
+function stopPlay(ended){
+  playing=false;
+  if(playRAF){ cancelAnimationFrame(playRAF); playRAF=null; }
+  playBtn.classList.remove('playing');
+  playBtn.innerHTML = ended ? '▶&nbsp;REPLAY' : '▶&nbsp;PLAY';
+}
+function playStep(ts){
+  if(!playing) return;
+  const dt = playPrev ? (ts-playPrev)/1000 : 0;
+  playPrev = ts;
+  playPos += dt*(T1-T0)/DURATION;
+  if(playPos >= T1){ playPos=T1; drive(T1); stopPlay(true); return; }
+  drive(playPos);
+  playRAF = requestAnimationFrame(playStep);
+}
+function startPlay(){
+  if(reduced) return;
+  playPos = (state.target >= T1-0.05) ? T0 : state.target;
+  playing=true; playPrev=0;
+  playBtn.classList.add('playing');
+  playBtn.innerHTML = '❚❚&nbsp;PAUSE';
+  playRAF = requestAnimationFrame(playStep);
+}
+playBtn.addEventListener('click', ()=> playing ? stopPlay(false) : startPlay());
+
+scrub.addEventListener('pointerdown', ()=>{ scrubbing=true; stopPlay(false); });
+window.addEventListener('pointerup', ()=>{ scrubbing=false; });
+scrub.addEventListener('input', ()=>{ stopPlay(false); drive(parseFloat(scrub.value)); });
+
+if(reduced){ playBtn.disabled=true; playBtn.title='Play disabled — reduced motion'; }
+
+render(12);
+
+/* ===== reveal on load, staggered ===== */
+window.addEventListener('load', ()=>{
+  const items=[...document.querySelectorAll('.reveal')];
+  items.forEach((n,i)=> setTimeout(()=> n.classList.add('revealed'), 90*i));
+});
+</script>
+</body>
+</html>
