@@ -1,0 +1,80 @@
+# Publishes each PR's viz_submission/ to the workshop gallery.
+#
+# pull_request_target is used so PRs from forks can reach the repo secrets.
+# In exchange this workflow MUST NEVER execute anything from the PR: it only
+# reads files out of viz_submission/ and uploads them. Keep it that way.
+#
+# Required repo secrets:
+#   GALLERY_API_URL  e.g. https://scoreboard-production-df34.up.railway.app  (no trailing slash)
+#   GALLERY_CI_KEY   the key configured on the gallery server
+
+name: Publish to gallery
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the PR's files (data only - never run them)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Publish viz_submission/ to the gallery
+        env:
+          API_URL: ${{ secrets.GALLERY_API_URL }}
+          CI_KEY: ${{ secrets.GALLERY_CI_KEY }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${API_URL:-}" ] || [ -z "${CI_KEY:-}" ]; then
+            echo "::error::GALLERY_API_URL / GALLERY_CI_KEY repo secrets are not set"
+            exit 1
+          fi
+
+          PAGE=viz_submission/index.html
+          if [ ! -f "$PAGE" ]; then
+            # No index.html: wrap the submitted image(s) in a minimal page.
+            # Images are referenced by commit-pinned GitHub raw URLs, so the
+            # gallery only ever hosts one small HTML file per participant.
+            IMGS=()
+            while IFS= read -r f; do IMGS+=("$f"); done < <(
+              find viz_submission -maxdepth 1 -type f \
+                \( -iname '*.png' -o -iname '*.gif' -o -iname '*.jpg' \
+                   -o -iname '*.jpeg' -o -iname '*.svg' -o -iname '*.webp' \) | sort)
+            if [ "${#IMGS[@]}" -eq 0 ]; then
+              echo "::error::no submission found - add viz_submission/index.html or an image (.png/.gif/.jpg/.svg/.webp)"
+              exit 1
+            fi
+            PAGE=$(mktemp)
+            {
+              printf '<!doctype html><html><head><meta charset="utf-8"><title>%s</title>\n' \
+                "$(jq -rn --arg t "$PR_TITLE" '$t|@html')"
+              printf '<style>body{margin:0;background:#f3f2f7;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;box-sizing:border-box}img{max-width:min(1100px,94vw);max-height:86vh;border-radius:12px;box-shadow:0 10px 34px rgba(20,15,40,.15)}</style></head><body>\n'
+              for f in "${IMGS[@]}"; do
+                printf '<img src="https://raw.githubusercontent.com/%s/%s/viz_submission/%s" alt="">\n' \
+                  "$HEAD_REPO" "$HEAD_SHA" "$(jq -rn --arg s "$(basename "$f")" '$s|@uri')"
+              done
+              printf '</body></html>\n'
+            } > "$PAGE"
+          fi
+
+          jq -n --arg name "$PR_AUTHOR" --arg title "$PR_TITLE" --arg desc "$PR_BODY" \
+            --rawfile html "$PAGE" \
+            '{name:$name, title:$title, description:$desc, html:$html}' |
+          curl -fsS -X POST "$API_URL/api/append" \
+            -H "x-ci-key: $CI_KEY" -H "Content-Type: application/json" -d @-
+
+          echo "Published $PR_AUTHOR's submission to the gallery."
